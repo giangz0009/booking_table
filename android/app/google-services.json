@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "61102233861",
+    "project_id": "bookingtable-d9cca",
+    "storage_bucket": "bookingtable-d9cca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:61102233861:android:ce421cb8529578b3a23f6c",
+        "android_client_info": {
+          "package_name": "com.example.booking_table"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "61102233861-fv6ae5jlmkq294660te8onfdrf1et0n0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_Nt72QWT3qF5Vd6U_GkzRHB9NNGXiG74"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "61102233861-fv6ae5jlmkq294660te8onfdrf1et0n0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:61102233861:android:bb573148b2a79b5aa23f6c",
+        "android_client_info": {
+          "package_name": "com.example.flutter_bookingtable"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "61102233861-4csski1m9b90f6sk2dp5ord98ifh007l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.flutter_bookingtable",
+            "certificate_hash": "ec6f9188c872fd772af75e135574a04f36173ac1"
+          }
+        },
+        {
+          "client_id": "61102233861-fv6ae5jlmkq294660te8onfdrf1et0n0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_Nt72QWT3qF5Vd6U_GkzRHB9NNGXiG74"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "61102233861-fv6ae5jlmkq294660te8onfdrf1et0n0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
