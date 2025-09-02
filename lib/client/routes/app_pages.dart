@@ -1,6 +1,7 @@
 import 'package:booking_table/client/middlewares/role_middleware.dart';
 import 'package:booking_table/client/ui/screens/ChangePasswordScreen.dart';
 import 'package:booking_table/client/ui/screens/HomeScreen.dart';
+import 'package:booking_table/client/ui/screens/OrderScreen.dart';
 import 'package:booking_table/client/ui/screens/SettingsScreen.dart';
 import 'package:booking_table/client/ui/screens/TableDetaliScreen.dart';
 import 'package:booking_table/client/ui/screens/TableScreen.dart';
@@ -20,6 +21,7 @@ class AppPages {
     GetPage(name: AppRoutes.settings, page: () => const SettingsScreen()),
     GetPage(name: AppRoutes.updateInfo, page: () => const UpdateInfoScreen()),
     GetPage(name: AppRoutes.changePassword, page: () => const ChangePasswordScreen()),
+    GetPage(name: AppRoutes.order, page: () => const OrderScreen()),
     GetPage(
         name: AppRoutes.thongKe,
         page: () => const ChangePasswordScreen(),

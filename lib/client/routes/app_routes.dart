@@ -61,6 +61,7 @@ class AppRoutes {
   static const settings = '/settings';
   static const updateInfo = '/update-info';
   static const changePassword = '/change-password';
+  static const order = '/order';
   static const thongKe = '/thong-ke';
 }
 

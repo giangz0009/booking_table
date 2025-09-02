@@ -1,6 +1,7 @@
 import 'package:booking_table/client/controllers/TableController.dart';
 import 'package:booking_table/client/data/models/Table.dart';
 import 'package:booking_table/client/data/models/TableStatus.dart';
+import 'package:booking_table/client/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -31,7 +32,14 @@ class TableDetailScreen extends StatelessWidget {
           runSpacing: 16,
           spacing: 16,
           children: [
-            _ActionButton(icon: Icons.shopping_bag_outlined, label: 'Order', onTap: () { /* TODO: mở màn order */ }),
+            _ActionButton(
+                icon: Icons.shopping_bag_outlined, 
+                label: 'Order', 
+                onTap: () { 
+                  /* TODO: mở màn order */ 
+                  Get.toNamed(AppRoutes.order, arguments: table);
+                }
+            ),
             _ActionButton(icon: Icons.join_full, label: 'Ghép bàn', onTap: _pickMerge),
             _ActionButton(icon: Icons.call_split, label: 'Tách bàn', onTap: () async {
               await ctrl.split(table.id);
