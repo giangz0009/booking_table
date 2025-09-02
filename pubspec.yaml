@@ -41,6 +41,8 @@ dependencies:
   cloud_firestore: ^5.5.0
   # Font awesome icon
   font_awesome_flutter: ^10.10.0
+  #Getx
+  get: ^4.7.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
