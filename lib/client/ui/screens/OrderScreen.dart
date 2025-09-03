@@ -15,8 +15,10 @@ class _OrderScreenState extends State<OrderScreen> {
   late final RestaurantTable table;
 
   final _currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
-  // RxMap để dễ observe. Khi thay đổi, Obx sẽ rebuild phần quan trọng.
   final RxMap<String, int> selectedItems = <String, int>{}.obs;
+  final TextEditingController noteController = TextEditingController();
+
+  String _selectedFilter = "all"; // all | food | drink
 
   @override
   void initState() {
@@ -29,7 +31,6 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   void _toggleItem(String id) {
-    // thêm món mới với qty = 1, hoặc nếu đã tồn tại thì remove
     if (selectedItems.containsKey(id)) {
       selectedItems.remove(id);
     } else {
@@ -65,7 +66,6 @@ class _OrderScreenState extends State<OrderScreen> {
       return;
     }
 
-    // Ví dụ lưu order đơn giản vào Firestore (collection "orders")
     final orderData = {
       'tableId': table.id,
       'tableNumber': table.tableNumber,
@@ -73,11 +73,11 @@ class _OrderScreenState extends State<OrderScreen> {
           .map((e) => {
         'foodId': e.key,
         'qty': e.value,
-        // lấy giá tên tạm nếu muốn:
         'price': (docs.firstWhere((d) => d.id == e.key).data()['price'] ?? 0)
       })
           .toList(),
       'total': _calcTotalPrice(docs),
+      'note': noteController.text.trim(),
       'createdAt': FieldValue.serverTimestamp(),
       'status': 'pending',
     };
@@ -85,6 +85,7 @@ class _OrderScreenState extends State<OrderScreen> {
     await FirebaseFirestore.instance.collection('orders').add(orderData);
     Get.snackbar("Thành công", "Đã tạo order cho bàn ${table.tableNumber}");
     selectedItems.clear();
+    noteController.clear();
     Get.back();
   }
 
@@ -94,7 +95,34 @@ class _OrderScreenState extends State<OrderScreen> {
       appBar: AppBar(title: Text("Order • Bàn ${table.tableNumber}")),
       body: Column(
         children: [
-          // danh sách món (lắng nghe stream từ Firebase)
+          // Bộ lọc loại món
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ChoiceChip(
+                  label: const Text("All"),
+                  selected: _selectedFilter == "all",
+                  onSelected: (_) => setState(() => _selectedFilter = "all"),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text("Đồ ăn"),
+                  selected: _selectedFilter == "food",
+                  onSelected: (_) => setState(() => _selectedFilter = "food"),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text("Đồ uống"),
+                  selected: _selectedFilter == "drink",
+                  onSelected: (_) => setState(() => _selectedFilter = "drink"),
+                ),
+              ],
+            ),
+          ),
+
+          // danh sách món
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _foodsStream(),
@@ -106,7 +134,12 @@ class _OrderScreenState extends State<OrderScreen> {
                   return const Center(child: Text("Chưa có món ăn nào"));
                 }
 
-                final foods = snapshot.data!.docs;
+                var foods = snapshot.data!.docs;
+
+                // Lọc theo loại
+                if (_selectedFilter != "all") {
+                  foods = foods.where((doc) => doc['type'] == _selectedFilter).toList();
+                }
 
                 return ListView.separated(
                   padding: const EdgeInsets.all(12),
@@ -120,7 +153,6 @@ class _OrderScreenState extends State<OrderScreen> {
                     final price = (data["price"] ?? 0).toDouble();
                     final image = data["image"] ?? "https://via.placeholder.com/100";
 
-                    // Chỉ phần trailing cần rebuild khi selectedItems thay đổi -> dùng Obx
                     return ListTile(
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
@@ -161,7 +193,20 @@ class _OrderScreenState extends State<OrderScreen> {
             ),
           ),
 
-          // bottom bar: tổng & nút xác nhận (cần dữ liệu foods để tính tổng -> dùng StreamBuilder kết hợp)
+          // ghi chú
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: TextField(
+              controller: noteController,
+              decoration: InputDecoration(
+                labelText: "Ghi chú cho order",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              maxLines: 2,
+            ),
+          ),
+
+          // bottom bar
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: _foodsStream(),
             builder: (context, snapshot) {
@@ -180,12 +225,12 @@ class _OrderScreenState extends State<OrderScreen> {
                       Expanded(child: Text("Đã chọn: $totalItems món — ${_currencyFormatter.format(totalPrice)}")),
                       Column(
                         children: [
-                          // Nút Reset
                           ElevatedButton.icon(
                             onPressed: selectedItems.isEmpty ? null : () {
                               setState(() {
-                                selectedItems.clear(); // xóa hết số lượng món đã add
+                                selectedItems.clear();
                               });
+                              noteController.clear();
                             },
                             style: ElevatedButton.styleFrom(
                               minimumSize: Size(160, 30),
@@ -196,14 +241,10 @@ class _OrderScreenState extends State<OrderScreen> {
                             label: const Text("Reset"),
                           ),
                           const SizedBox(height: 8),
-
-                          // Nút Xác nhận
                           ElevatedButton.icon(
                             onPressed: selectedItems.isEmpty ? null : () => _submitOrder(foods),
                             icon: const Icon(Icons.check),
-                            label: const Text("Xác nhận",
-                              style: TextStyle(color: Colors.white),
-                            ),
+                            label: const Text("Xác nhận", style: TextStyle(color: Colors.white)),
                             style: ElevatedButton.styleFrom(
                               iconColor: Colors.white,
                               backgroundColor: Colors.green,
