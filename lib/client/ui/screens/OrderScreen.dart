@@ -18,7 +18,7 @@ class _OrderScreenState extends State<OrderScreen> {
   final RxMap<String, int> selectedItems = <String, int>{}.obs;
   final TextEditingController noteController = TextEditingController();
 
-  String _selectedFilter = "all"; // all | food | drink
+  String? _selectedFoodtypeId; // null = All
 
   @override
   void initState() {
@@ -28,6 +28,10 @@ class _OrderScreenState extends State<OrderScreen> {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _foodsStream() {
     return FirebaseFirestore.instance.collection("menu").snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _foodtypesStream() {
+    return FirebaseFirestore.instance.collection("foodtypes").snapshots();
   }
 
   void _toggleItem(String id) {
@@ -60,32 +64,39 @@ class _OrderScreenState extends State<OrderScreen> {
     return total;
   }
 
-  void _submitOrder(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
-    if (selectedItems.isEmpty) {
-      Get.snackbar("Thông báo", "Vui lòng chọn ít nhất 1 món");
-      return;
-    }
+  Future<void> _submitOrder() async {
+    if (selectedItems.isEmpty) return;
 
-    final orderData = {
-      'tableId': table.id,
-      'tableNumber': table.tableNumber,
-      'items': selectedItems.entries
-          .map((e) => {
-        'foodId': e.key,
-        'qty': e.value,
-        'price': (docs.firstWhere((d) => d.id == e.key).data()['price'] ?? 0)
-      })
-          .toList(),
-      'total': _calcTotalPrice(docs),
-      'note': noteController.text.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'status': 'pending',
+    final order = {
+      "tableId": table.id,
+      "items": selectedItems.entries.map((e) => {
+        "foodId": e.key,
+        "quantity": e.value,
+      }).toList(),
+      "note": noteController.text,
+      "createdAt": FieldValue.serverTimestamp(),
+      "status": "pending",
     };
 
-    await FirebaseFirestore.instance.collection('orders').add(orderData);
-    Get.snackbar("Thành công", "Đã tạo order cho bàn ${table.tableNumber}");
+    final db = FirebaseFirestore.instance;
+
+    // 🔹 Lưu order
+    await db.collection("orders").add(order);
+
+    // 🔹 Cập nhật trạng thái bàn thành "occupied"
+    await db.collection("tables").doc(table.id).update({
+      "status": "occupied",
+    });
+
+    // 🔹 Reset UI
     selectedItems.clear();
     noteController.clear();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Đã gửi order và cập nhật bàn thành 'occupied'")),
+    );
+
+    // Quay về màn hình trước
     Get.back();
   }
 
@@ -95,34 +106,43 @@ class _OrderScreenState extends State<OrderScreen> {
       appBar: AppBar(title: Text("Order • Bàn ${table.tableNumber}")),
       body: Column(
         children: [
-          // Bộ lọc loại món
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ChoiceChip(
-                  label: const Text("All"),
-                  selected: _selectedFilter == "all",
-                  onSelected: (_) => setState(() => _selectedFilter = "all"),
+          // 🔹 Thanh filter lấy từ Firebase
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _foodtypesStream(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox.shrink();
+              final foodtypes = snapshot.data!.docs;
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text("All"),
+                      selected: _selectedFoodtypeId == null,
+                      onSelected: (_) => setState(() => _selectedFoodtypeId = null),
+                    ),
+                    const SizedBox(width: 8),
+                    ...foodtypes.map((ft) {
+                      final id = ft.id;
+                      final name = ft.data()["name"] ?? "Không tên";
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(name),
+                          selected: _selectedFoodtypeId == id,
+                          onSelected: (_) => setState(() => _selectedFoodtypeId = id),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text("Đồ ăn"),
-                  selected: _selectedFilter == "food",
-                  onSelected: (_) => setState(() => _selectedFilter = "food"),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text("Đồ uống"),
-                  selected: _selectedFilter == "drink",
-                  onSelected: (_) => setState(() => _selectedFilter = "drink"),
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
-          // danh sách món
+          // 🔹 Danh sách món
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _foodsStream(),
@@ -136,9 +156,9 @@ class _OrderScreenState extends State<OrderScreen> {
 
                 var foods = snapshot.data!.docs;
 
-                // Lọc theo loại
-                if (_selectedFilter != "all") {
-                  foods = foods.where((doc) => doc['type'] == _selectedFilter).toList();
+                // lọc theo foodtype_id
+                if (_selectedFoodtypeId != null) {
+                  foods = foods.where((doc) => doc['foodtype_id'] == _selectedFoodtypeId).toList();
                 }
 
                 return ListView.separated(
@@ -193,7 +213,7 @@ class _OrderScreenState extends State<OrderScreen> {
             ),
           ),
 
-          // ghi chú
+          // 🔹 Ghi chú
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: TextField(
@@ -205,6 +225,7 @@ class _OrderScreenState extends State<OrderScreen> {
               maxLines: 2,
             ),
           ),
+
 
           // bottom bar
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -242,7 +263,7 @@ class _OrderScreenState extends State<OrderScreen> {
                           ),
                           const SizedBox(height: 8),
                           ElevatedButton.icon(
-                            onPressed: selectedItems.isEmpty ? null : () => _submitOrder(foods),
+                            onPressed: selectedItems.isEmpty ? null : () => _submitOrder(),
                             icon: const Icon(Icons.check),
                             label: const Text("Xác nhận", style: TextStyle(color: Colors.white)),
                             style: ElevatedButton.styleFrom(
